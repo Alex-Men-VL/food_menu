@@ -33,13 +33,8 @@ def get_recipes_links(eda_url):
     return recipes_links
 
 
-def get_recipe(title, link, meal):
-    """Формирует csv файл с ингредиентами и txt файл с рецептом"""
-    soup = get_site_access(link)
-    Path(f'recipes/{meal}').mkdir(parents=True, exist_ok=True)
-    # На сколько порций рассчитано
-    portions = soup.find(class_='field__container').find(attrs={'name': 'servings'})['value']
-    # Записываем заголовки столбцов
+def make_csv_with_headers(meal, title, portions):
+    """Формирует csv файл с заголовками столбцов и информацией о количестве порций."""
     with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow(
@@ -51,22 +46,39 @@ def get_recipe(title, link, meal):
             )
         )
 
+
+def add_to_csv(meal, title, product_info):
+    """Записывает ингредиенты в csv файл."""
+    with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            (
+                product_info[0],
+                product_info[1],
+                product_info[2]
+            )
+        )
+
+
+def get_recipe(title, link, meal):
+    """Собирает информацию о ингредиентах и txt файл с рецептом"""
+    soup = get_site_access(link)
+    Path(f'recipes/{meal}').mkdir(parents=True, exist_ok=True)
+    # На сколько порций рассчитано
+    portions = soup.find(class_='field__container').find(attrs={'name': 'servings'})['value']
+    # Записываем заголовки столбцов
+    make_csv_with_headers(meal, title, portions)
+
     products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
     # Перебираем продукты из списка ингредиентов
     for product in products:
         product_title = product.find(class_='recipe_ingredient_title').text
         product_count = product.find(class_='definition-list-table__td definition-list-table__td_value').text
         product_price = 0  # Здесь вызов функция с ценой
-        # Записываем ингредиент и его количество в таблицу csv
-        with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                (
-                    product_title,
-                    product_count,
-                    product_price
-                )
-            )
+        product_info = [product_title, product_count, product_price]
+        # Записываем ингредиенты в csv файл
+        add_to_csv(meal, title, product_info)
+
     # Создаем txt файл с инструкцией по приготовлению
     cooking_steps = soup.find_all(class_='plain-text recipe_step_text')
     with open(f'recipes/{meal}/{title}.txt', 'w') as file:
