@@ -1,4 +1,7 @@
+import collections
 import csv
+import json
+import re
 from pathlib import Path
 
 import requests
@@ -69,15 +72,38 @@ def get_recipe(title, link, meal):
     # Записываем заголовки столбцов
     make_csv_with_headers(meal, title, portions)
 
+    dish = collections.defaultdict(list)
+    dish['Название блюда'] = title
+
     products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
     # Перебираем продукты из списка ингредиентов
     for product in products:
         product_title = product.find(class_='recipe_ingredient_title').text
+        dish['Ингредиенты'].append(product_title)
+
         product_count = product.find(class_='definition-list-table__td definition-list-table__td_value').text
+        # Проверяем наличие цифр в product_count
+        if re.search(r'\d+', product_count) or '½' in product_count or '¼' in product_count:
+            items = product_count.split()
+            digit = items[0]
+            if len(items) == 2:
+                measure = items[1]
+            else:
+                measure = items[1] + items[2]
+            dish['Количество'].append(digit)
+            dish['Мера'].append(measure)
+        else:
+            dish['Количество'].append(None)
+            dish['Мера'].append(product_count)
         product_price = 0  # Здесь вызов функция с ценой
+
         product_info = [product_title, product_count, product_price]
         # Записываем ингредиенты в csv файл
         add_to_csv(meal, title, product_info)
+
+    # Записываем информацию о блюде в json файл
+    with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
+        json.dump(dish, file, indent=4, ensure_ascii=False)
 
     # Создаем txt файл с инструкцией по приготовлению
     cooking_steps = soup.find_all(class_='plain-text recipe_step_text')
