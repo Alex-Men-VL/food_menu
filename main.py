@@ -87,6 +87,9 @@ def get_recipes_by_category(meals):
 def main():
     Path('recipes').mkdir(parents=True, exist_ok=True)
     meals = ['завтрак', 'обед', 'ужин']
+    number_of_meals = int(input('Выберите количество приемов пищи в день (3 или 4): '))
+    if number_of_meals == 4:
+        meals.insert(2, 'полдник')
     get_recipes_by_category(meals)
 
 
