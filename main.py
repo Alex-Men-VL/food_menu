@@ -22,10 +22,14 @@ def get_recipes_links(eda_url):
 
     dishes = soup.find_all('div', class_='card__description')
     recipes_links = {}
+    amount = 0  # Количество рецептов
     for dish in dishes:
         dish_title = dish.find('div', class_='card__title title').text
         dish_link = dish.find('a').get('href')
         recipes_links[dish_title] = f'https://www.edimdoma.ru{dish_link}'
+        amount += 1
+        if amount == 21:
+            break
     return recipes_links
 
 
