@@ -51,7 +51,7 @@ def get_recipe(title, link, meal):
             )
         )
 
-    products = soup.find(class_='field-row recipe_ingredients').find_all(class_='definition-list-table')
+    products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
     # Перебираем продукты из списка ингредиентов
     for product in products:
         product_title = product.find(class_='recipe_ingredient_title').text
