@@ -63,12 +63,19 @@ def add_to_csv(meal, title, product_info):
         )
 
 
+def make_txt_with_cooking_steps(cooking_steps, meal, title):
+    with open(f'recipes/{meal}/{title}.txt', 'w') as file:
+        for number, step in enumerate(cooking_steps, 1):
+            file.write(f'{number}. {step.text}\n\n')
+
+
 def get_recipe(title, link, meal):
     """Собирает информацию о ингредиентах и txt файл с рецептом"""
     soup = get_site_access(link)
     Path(f'recipes/{meal}').mkdir(parents=True, exist_ok=True)
     # На сколько порций рассчитано
     portions = soup.find(class_='field__container').find(attrs={'name': 'servings'})['value']
+
     # Записываем заголовки столбцов
     make_csv_with_headers(meal, title, portions)
 
@@ -96,17 +103,17 @@ def get_recipe(title, link, meal):
             dish['Количество'].append(None)
             dish['Мера'].append(product_count)
         product_price = 0  # Здесь вызов функция с ценой
-
         product_info = [product_title, product_count, product_price]
         # Записываем ингредиенты в csv файл
         add_to_csv(meal, title, product_info)
 
-    # Создаем txt файл с инструкцией по приготовлению
     cooking_steps = soup.find_all(class_='plain-text recipe_step_text')
-    with open(f'recipes/{meal}/{title}.txt', 'w') as file:
-        for number, step in enumerate(cooking_steps, 1):
-            dish['Шаги готовки'].append(f'{number}. {step.text}')
-            file.write(f'{number}. {step.text}\n\n')
+    # Записываем шаги готовки в словарь файл
+    for number, step in enumerate(cooking_steps, 1):
+        dish['Шаги готовки'].append(f'{number}. {step.text}')
+
+    # Создаем txt файл с инструкцией по приготовлению
+    make_txt_with_cooking_steps(cooking_steps, meal, title)
 
     # Записываем информацию о блюде в json файл
     with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
