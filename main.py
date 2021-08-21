@@ -76,6 +76,8 @@ def get_recipe(title, link, meal):
     dish['Название блюда'] = title
     dish['Количество порций'] = portions
 
+    fractions = ('½', '⅓', '¼', '⅕', '⅛')
+
     products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
     # Перебираем продукты из списка ингредиентов
     for product in products:
@@ -84,15 +86,12 @@ def get_recipe(title, link, meal):
 
         product_count = product.find(class_='definition-list-table__td definition-list-table__td_value').text
         # Проверяем наличие цифр в product_count
-        if re.search(r'\d+', product_count) or '½' in product_count or '¼' in product_count:
+        if re.search(r'\d+', product_count) or any(fraction for fraction in fractions if fraction in product_count):
             items = product_count.split()
-            digit = items[0]
-            if len(items) == 2:
-                measure = items[1]
-            else:
-                measure = items[1] + items[2]
-            dish['Количество'].append(digit)
-            dish['Мера'].append(measure)
+            digit = [item for item in items if item.replace(',', '').isdigit() or item in fractions]
+            measure = [item for item in items if item not in digit]
+            dish['Количество'].append(''.join(digit))
+            dish['Мера'].append(''.join(measure))
         else:
             dish['Количество'].append(None)
             dish['Мера'].append(product_count)
