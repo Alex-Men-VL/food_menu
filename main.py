@@ -74,6 +74,7 @@ def get_recipe(title, link, meal):
 
     dish = collections.defaultdict(list)
     dish['Название блюда'] = title
+    dish['Количество порций'] = portions
 
     products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
     # Перебираем продукты из списка ингредиентов
@@ -101,15 +102,16 @@ def get_recipe(title, link, meal):
         # Записываем ингредиенты в csv файл
         add_to_csv(meal, title, product_info)
 
-    # Записываем информацию о блюде в json файл
-    with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
-        json.dump(dish, file, indent=4, ensure_ascii=False)
-
     # Создаем txt файл с инструкцией по приготовлению
     cooking_steps = soup.find_all(class_='plain-text recipe_step_text')
     with open(f'recipes/{meal}/{title}.txt', 'w') as file:
         for number, step in enumerate(cooking_steps, 1):
+            dish['Шаги готовки'].append(f'{number}. {step.text}')
             file.write(f'{number}. {step.text}\n\n')
+
+    # Записываем информацию о блюде в json файл
+    with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
+        json.dump(dish, file, indent=4, ensure_ascii=False)
 
 
 def get_recipes_by_category(meals):
