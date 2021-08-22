@@ -61,9 +61,8 @@ def make_menu_other_days(meals, used, current_date):
             print(dish['Название блюда'], '\n')
 
 
-def main():
-    Path('recipes').mkdir(parents=True, exist_ok=True)
-    meals = ['завтрак', 'обед', 'ужин', 'полдник']
+def download_recipes(meals):
+    """Загружает рецепты блюд для каждого приема пищи."""
     flag = False
     # Проверяем наличие списка блюд для каждого приема пищи
     for meal in meals:
@@ -73,6 +72,9 @@ def main():
     if flag:
         print('Все категории обработаны!\n')
 
+
+def output_to_console(meals):
+    """Функция выводит меню в консоль."""
     print('Привет!')
     while True:
         message_1 = input("Напиши \u001b[32;1mхочу меню\u001b[0m, чтобы получить меню на неделю.\n")
@@ -83,6 +85,15 @@ def main():
             break
         else:
             print('Я тебя не понял.')
+
+
+def main():
+    Path('recipes').mkdir(parents=True, exist_ok=True)
+    meals = ['завтрак', 'обед', 'ужин', 'полдник']
+    # Загружаем рецепты каждого приема пищи
+    download_recipes(meals)
+    # Выводим меню в консоль
+    output_to_console(meals)
 
 
 if __name__ == '__main__':
