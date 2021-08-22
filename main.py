@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import json
 import os
@@ -138,15 +139,24 @@ def output_to_console(meals):
             print('Я тебя не понял.')
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Displays the diet for a week')
+    parser.add_argument('--tg', type=bool, help='Enter "True" if you want to get the menu in the console', default=False)
+    return parser.parse_args()
+
+
 def main():
     Path('recipes').mkdir(parents=True, exist_ok=True)
     meals = ['завтрак', 'обед', 'ужин', 'полдник']
     # Загружаем рецепты каждого приема пищи
     download_recipes(meals)
-    # Выводим меню в консоль
-    # output_to_console(meals)
-    # Выводим в тг через бота
-    post_menu_in_tg()
+    tg = parse_arguments().tg
+    if tg:
+        # Выводим в тг через бота
+        post_menu_in_tg()
+    else:
+        # Выводим меню в консоль
+        output_to_console(meals)
 
 
 if __name__ == '__main__':
