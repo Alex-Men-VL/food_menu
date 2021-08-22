@@ -16,7 +16,7 @@ def make_menu_for_week(meals, meals_count, used):
         meals[-1], meals[-2] = meals[-2], meals[-1]
 
     current_date = datetime.datetime.now()
-    last_date = current_date + datetime.timedelta(days=7)
+    last_date = current_date + datetime.timedelta(days=6)
 
     folder_name = f'Подробное меню на {current_date.strftime("%d-%b-%Y")} - {last_date.strftime("%d-%b-%Y")}'
 
