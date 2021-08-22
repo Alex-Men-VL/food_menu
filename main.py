@@ -6,6 +6,7 @@ import shutil
 from pathlib import Path
 
 from recipes import get_recipes_by_category
+from tg_bot import post_menu_in_tg
 
 
 def make_menu_for_week(meals, meals_count, used):
@@ -98,7 +99,6 @@ def make_menu_other_days(meals, used, current_date, folder_name):
             print(dish['Название блюда'], '\n')
 
             file.write('\nИнгредиенты:\n')
-
             for number, product in enumerate(dish['Ингредиенты']):
                 if dish['Количество'][number]:
                     file.write(f'{product} : {dish["Количество"][number]} {dish["Мера"][number]}\n')
@@ -144,7 +144,9 @@ def main():
     # Загружаем рецепты каждого приема пищи
     download_recipes(meals)
     # Выводим меню в консоль
-    output_to_console(meals)
+    # output_to_console(meals)
+    # Выводим в тг через бота
+    post_menu_in_tg()
 
 
 if __name__ == '__main__':
