@@ -2,3 +2,5 @@ recipes
 env
 Подробное меню
 .env
+chromedriver
+*.html
