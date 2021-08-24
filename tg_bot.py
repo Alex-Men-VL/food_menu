@@ -1,22 +1,132 @@
 import datetime
 import json
-import logging
 import os
 import random
 import shutil
 from pathlib import Path
 
+import telebot
 from environs import Env
-from telegram import Bot
-from telegram.ext import CommandHandler, Updater
+from recipes import get_recipes_by_category
+from telebot import types
+
+env = Env()
+env.read_env()
+token = env('TG_TOKEN')
+
+bot = telebot.TeleBot(token)
+
+page_number = 0
 
 
-def start(update, context):
-    user = update.effective_user
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    user = message.from_user
     name = user.first_name
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f"Привет, {name}!\nЯ могу составить для тебя рацион питания на неделю.\n"
-                                  "Напиши '/menu <количество приемов пищи в день (3/4)>' для получения рациона.")
+    bot_name = bot.get_me().first_name
+
+    # Кнопки на основном экране для получения рационов питания
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    menu_button_3 = types.KeyboardButton("Получить меню с тремя приемами пищи")
+    menu_button_4 = types.KeyboardButton("Получить меню с четырьмя приемами пищи")
+    menu_button_load = types.KeyboardButton("Скачать новый список рецептов")
+    menu_button_detail = types.KeyboardButton("Подробное меню")
+
+    markup.row(menu_button_3, menu_button_4)
+    markup.row(menu_button_detail, menu_button_load)
+
+    # Приветствие бота
+    bot.send_message(message.chat.id, f'Добро пожаловать, {name}! Я - {bot_name}.\n'
+                                      f'Я могу составить для вас меню на неделю.\n\n'
+                                      f'_Нажмите на кнопку "Скачать новый список рецептов", чтобы загрузить рецепты_.\n'
+                                      f'_Если вы хотите узнать о всех моих возможностях, введите /help_.',
+                     reply_markup=markup, parse_mode='Markdown')
+
+
+@bot.message_handler(commands=['help'])
+def get_help(message):
+    """Отправляет сообщение, описывающее все возможности бота"""
+    bot.send_message(message.chat.id,
+                     '1) При первом запуске бота необходимо нажать на кнопку *Скачать новый список рецептов*, '
+                     'чтобы загрузить список рецептов, по которым будет составляться меню. Если все прошло успешно, '
+                     'вы получите сообщение: *Список рецептов обновлен!*\n'
+                     '2) Чтобы получить меню на неделю, нажмите на одну из верхних кнопок внизу экрана, '
+                     'в зависимости от того, сколько приемов пищи в день вы предпочитаете.\n'
+                     '3) Получив меню, вы можете нажать на *Подробное меню*, при этом вы получите ответное сообщение,'
+                     'в котором сможете выбрать день, подробное меню которого хотите получить в виде txt файла.\n'
+                     '4) Если вам не нравятся те блюда, которые предлагает бот, нажмите повторно на *Скачать новый список рецептов*'
+                     ', и он обновит список рецептов.',  parse_mode='Markdown')
+
+
+@bot.message_handler(content_types=['text'])
+def post_menu(message):
+    """Отправляет краткое меню на неделю с 3/4 приемами пищи в день"""
+    if message.text == 'Получить меню с тремя приемами пищи':
+        bot_text = make_menu(3)
+        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown')
+        bot.send_message(message.chat.id, '_Если у вас возникли проблемы, введите /help_', parse_mode='Markdown')
+    elif message.text == 'Получить меню с четырьмя приемами пищи':
+        bot_text = make_menu(4)
+        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown')
+        bot.send_message(message.chat.id, '_Если у вас возникли проблемы, введите /help_', parse_mode='Markdown')
+    elif message.text == 'Скачать новый список рецептов':
+        load_recipes(message)
+    elif message.text == 'Подробное меню':
+        post_recipes(message)
+
+
+def load_recipes(message):
+    """Загружаем файлы с рецептами"""
+    global page_number
+
+    bot.send_message(message.chat.id, 'Пожалуйста, подождите.')
+
+    if 'recipes' in os.listdir('.'):
+        shutil.rmtree('recipes')
+    Path('recipes').mkdir(parents=True, exist_ok=True)
+    meals = ['завтрак', 'обед', 'ужин', 'полдник']
+
+    page_number += 1
+    if page_number == 60:
+        page_number = 1
+
+    for meal in meals:
+        status = get_recipes_by_category(meal, page_number)
+        bot.send_message(message.chat.id, status)
+    bot.send_message(message.chat.id, 'Список рецептов обновлен!\n'
+                                      'Теперь вы можете получить меню на неделю.')
+
+
+def post_recipes(message):
+    """Отправляет сообщение с кнопками, нажав на которые можно получить подробное описание меню на каждый день"""
+    current_date = datetime.datetime.now()
+    markup = types.InlineKeyboardMarkup()
+    for day in range(7):
+        total_date = current_date + datetime.timedelta(days=day)
+        markup.add(types.InlineKeyboardButton(f'Меню на {total_date.strftime("%d-%b-%Y")}', callback_data=str(day)))
+
+    bot.send_message(message.chat.id, 'На какой день вам показать меню?', reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+    """Отправляет txt файл с подробным меню"""
+    if call.data.isdigit():
+        current_date = datetime.datetime.now()
+        last_date = current_date + datetime.timedelta(days=6)
+        folder_name = f'Подробное меню на {current_date.strftime("%d-%b-%Y")} - {last_date.strftime("%d-%b-%Y")}'
+        if folder_name in os.listdir('.'):
+            total_date = current_date + datetime.timedelta(days=int(call.data))
+            file = open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'r')
+            bot.send_document(call.message.chat.id, file)
+
+        # Удаляем сообщение с кнопками
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Подробное меню',
+                              reply_markup=None)
+
+        bot.answer_callback_query(callback_query_id=call.id, show_alert=False,
+                                  text='Если вы не получили файл с подробным меню, '
+                                       'нажмите на кнопку "Получить меню"')
 
 
 def make_folder(current_date):
@@ -24,30 +134,31 @@ def make_folder(current_date):
 
     folder_name = f'Подробное меню на {current_date.strftime("%d-%b-%Y")} - {last_date.strftime("%d-%b-%Y")}'
 
-    if folder_name in os.listdir('.'):
-        shutil.rmtree(folder_name)
+    for folder in os.listdir('.'):
+        if 'Подробное меню на' in folder:
+            shutil.rmtree(folder)
     Path(folder_name).mkdir(exist_ok=True)
     return folder_name
 
 
-def menu(update, context):
+def make_menu(meals_count):
+    """Составляет меню на неделю"""
     meals = ['завтрак', 'обед', 'ужин', 'полдник']
-    if '4' in context.args:
+    if meals_count == 4:
         meals[-1], meals[-2] = meals[-2], meals[-1]
-        meals_count = 4
-    else:
-        meals_count = 3
 
     used = []
     current_date = datetime.datetime.now()
     folder_name = make_folder(current_date)
+
+    bot_text = ''
 
     for day in range(1, 8):
         # Создаем txt файл с меню на первый день
         total_date = current_date + datetime.timedelta(days=day - 1)
         file = open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'a')
 
-        bot_text = f'{total_date.strftime("%d-%b-%Y")}\n'
+        bot_text += f'*{total_date.strftime("%d-%b-%Y")}*\n\n'
 
         for meal in meals[0:meals_count]:
             # Сохраняем список блюд для конкретного приема пищи
@@ -61,11 +172,8 @@ def menu(update, context):
                     used.append(dish['id'])
                     break
 
-            file.write(f'\n***{meal.title()}***\n')
-            bot_text += f'***{meal.title()}***\n'
-
-            file.write(f'Название блюда: {dish["Название блюда"]}\n')
-            bot_text += f'Название блюда: {dish["Название блюда"]}\n'
+            file.write(f'\n{meal.title()}: {dish["Название блюда"]}\n')
+            bot_text += f'*{meal.title()}*: {dish["Название блюда"]}\n'
 
             file.write('\nИнгредиенты:\n')
 
@@ -82,28 +190,9 @@ def menu(update, context):
             file.write('\n')
 
             used.append(dish['id'])
-
+        bot_text += '\n'
         file.close()
-        context.bot.send_message(chat_id=update.effective_chat.id, text=bot_text)
-        context.bot.send_document(chat_id=update.effective_chat.id, document=open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt'))
+    return bot_text
 
 
-def post_menu_in_tg():
-    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                        level=logging.INFO)
-    env = Env()
-    env.read_env()
-
-    tg_token = env('TG_TOKEN')
-    bot = Bot(token=tg_token)
-    updater = Updater(bot=bot, use_context=True)
-    dispatcher = updater.dispatcher
-
-    start_handler = CommandHandler('start', start)
-    dispatcher.add_handler(start_handler)
-
-    make_menu = CommandHandler('menu', menu)
-    dispatcher.add_handler(make_menu)
-
-    updater.start_polling()
-    updater.idle()
+bot.polling()
