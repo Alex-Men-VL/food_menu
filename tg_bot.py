@@ -7,7 +7,6 @@ from pathlib import Path
 
 import telebot
 from environs import Env
-from recipes import get_recipes_by_category
 from telebot import types
 
 env = Env()
@@ -16,7 +15,7 @@ token = env('TG_TOKEN')
 
 bot = telebot.TeleBot(token)
 
-page_number = 0
+page_number = 1
 
 
 @bot.message_handler(commands=['start'])
@@ -29,7 +28,7 @@ def start_message(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     menu_button_3 = types.KeyboardButton("Получить меню с тремя приемами пищи")
     menu_button_4 = types.KeyboardButton("Получить меню с четырьмя приемами пищи")
-    menu_button_load = types.KeyboardButton("Скачать новый список рецептов")
+    menu_button_load = types.KeyboardButton("Обновить список рецептов")
     menu_button_detail = types.KeyboardButton("Подробное меню")
 
     markup.row(menu_button_3, menu_button_4)
@@ -38,7 +37,7 @@ def start_message(message):
     # Приветствие бота
     bot.send_message(message.chat.id, f'Добро пожаловать, {name}! Я - {bot_name}.\n'
                                       f'Я могу составить для вас меню на неделю.\n\n'
-                                      f'_Нажмите на кнопку "Скачать новый список рецептов", чтобы загрузить рецепты_.\n'
+                                      f'_Нажмите на кнопку_ *Получить меню*_, выбрав количество приемов пищи_.\n'
                                       f'_Если вы хотите узнать о всех моих возможностях, введите /help_.',
                      reply_markup=markup, parse_mode='Markdown')
 
@@ -47,15 +46,12 @@ def start_message(message):
 def get_help(message):
     """Отправляет сообщение, описывающее все возможности бота"""
     bot.send_message(message.chat.id,
-                     '1) При первом запуске бота необходимо нажать на кнопку *Скачать новый список рецептов*, '
-                     'чтобы загрузить список рецептов, по которым будет составляться меню. Если все прошло успешно, '
-                     'вы получите сообщение: *Список рецептов обновлен!*\n'
-                     '2) Чтобы получить меню на неделю, нажмите на одну из верхних кнопок внизу экрана, '
+                     '1) Чтобы получить меню на неделю, нажмите на одну из верхних кнопок внизу экрана, '
                      'в зависимости от того, сколько приемов пищи в день вы предпочитаете.\n'
-                     '3) Получив меню, вы можете нажать на *Подробное меню*, при этом вы получите ответное сообщение,'
+                     '2) Получив меню, вы можете нажать на *Подробное меню*, при этом вы получите ответное сообщение,'
                      'в котором сможете выбрать день, подробное меню которого хотите получить в виде txt файла.\n'
-                     '4) Если вам не нравятся те блюда, которые предлагает бот, нажмите повторно на *Скачать новый список рецептов*'
-                     ', и он обновит список рецептов.',  parse_mode='Markdown')
+                     '3) Если вам не нравятся те блюда, которые предлагает бот, нажмите на кнопку *Обновить список рецептов*'
+                     , parse_mode='Markdown')
 
 
 @bot.message_handler(content_types=['text'])
@@ -69,32 +65,21 @@ def post_menu(message):
         bot_text = make_menu(4)
         bot.send_message(message.chat.id, bot_text, parse_mode='Markdown')
         bot.send_message(message.chat.id, '_Если у вас возникли проблемы, введите /help_', parse_mode='Markdown')
-    elif message.text == 'Скачать новый список рецептов':
+    elif message.text == 'Обновить список рецептов':
         load_recipes(message)
     elif message.text == 'Подробное меню':
         post_recipes(message)
 
 
 def load_recipes(message):
-    """Загружаем файлы с рецептами"""
+    """Обновляет папку со списками рецептов"""
     global page_number
 
-    bot.send_message(message.chat.id, 'Пожалуйста, подождите.')
-
-    if 'recipes' in os.listdir('.'):
-        shutil.rmtree('recipes')
-    Path('recipes').mkdir(parents=True, exist_ok=True)
-    meals = ['завтрак', 'обед', 'ужин', 'полдник']
-
     page_number += 1
-    if page_number == 60:
+    if page_number == 11:
         page_number = 1
 
-    for meal in meals:
-        status = get_recipes_by_category(meal, page_number)
-        bot.send_message(message.chat.id, status)
-    bot.send_message(message.chat.id, 'Список рецептов обновлен!\n'
-                                      'Теперь вы можете получить меню на неделю.')
+    bot.send_message(message.chat.id, 'Список рецептов обновлен!')
 
 
 def post_recipes(message):
@@ -114,7 +99,7 @@ def callback_inline(call):
     if call.data.isdigit():
         current_date = datetime.datetime.now()
         last_date = current_date + datetime.timedelta(days=6)
-        folder_name = f'Подробное меню на {current_date.strftime("%d-%b-%Y")} - {last_date.strftime("%d-%b-%Y")}'
+        folder_name = 'Подробное меню'
         if folder_name in os.listdir('.'):
             total_date = current_date + datetime.timedelta(days=int(call.data))
             file = open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'r')
@@ -129,18 +114,6 @@ def callback_inline(call):
                                        'нажмите на кнопку "Получить меню"')
 
 
-def make_folder(current_date):
-    last_date = current_date + datetime.timedelta(days=6)
-
-    folder_name = f'Подробное меню на {current_date.strftime("%d-%b-%Y")} - {last_date.strftime("%d-%b-%Y")}'
-
-    for folder in os.listdir('.'):
-        if 'Подробное меню на' in folder:
-            shutil.rmtree(folder)
-    Path(folder_name).mkdir(exist_ok=True)
-    return folder_name
-
-
 def make_menu(meals_count):
     """Составляет меню на неделю"""
     meals = ['завтрак', 'обед', 'ужин', 'полдник']
@@ -149,7 +122,12 @@ def make_menu(meals_count):
 
     used = []
     current_date = datetime.datetime.now()
-    folder_name = make_folder(current_date)
+
+    folder_name = 'Подробное меню'
+
+    if folder_name in os.listdir('.'):
+        shutil.rmtree(folder_name)
+    Path(folder_name).mkdir(exist_ok=True)
 
     bot_text = ''
 
@@ -162,7 +140,7 @@ def make_menu(meals_count):
 
         for meal in meals[0:meals_count]:
             # Сохраняем список блюд для конкретного приема пищи
-            with open(f'recipes/{meal}.json', 'r') as file_json:
+            with open(f'recipes/{page_number}/{meal}.json', 'r') as file_json:
                 recipes = json.load(file_json)
 
             # Находим рецепт, который еще не выводился
