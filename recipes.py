@@ -1,7 +1,7 @@
 import collections
 import csv
-import re
 import json
+import re
 
 import requests
 from bs4 import BeautifulSoup
@@ -123,12 +123,13 @@ def get_recipe(title, link, meal, count):
     #     json.dump(dish, file, indent=4, ensure_ascii=False)
 
 
-def get_recipes_by_category(meal):
+def get_recipes_by_category(meal, page_number):
     """Собирает данные по всем рецептам из данной категории и записывает их в JSON файл"""
     global count
 
     dishes = []
-    edimdoma_url = f'https://www.edimdoma.ru/retsepty?tags%5Brecipe_mealtime%5D%5B%5D={meal}&with_ingredient=&with_ingredient_condition=and&without_ingredient=&user_ids=&field=&direction=&query='
+    # edimdoma_url = f'https://www.edimdoma.ru/retsepty?tags%5Brecipe_mealtime%5D%5B%5D={meal}&with_ingredient=&with_ingredient_condition=and&without_ingredient=&user_ids=&field=&direction=&query='
+    edimdoma_url = f'https://www.edimdoma.ru/retsepty?page={page_number}&tags%5Brecipe_mealtime%5D%5B%5D={meal}'
     recipes_links = get_recipes_links(edimdoma_url)
     for dish_title, dish_link in recipes_links.items():
         dish = get_recipe(dish_title, dish_link, meal, count)
@@ -137,3 +138,4 @@ def get_recipes_by_category(meal):
     with open(f'recipes/{meal}.json', 'w', encoding='utf-8') as file:
         json.dump(dishes, file, indent=4, ensure_ascii=False)
     print(f'Обработка категории {meal} завершена.')
+    return f'Обработка категории {meal} завершена.'
