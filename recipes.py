@@ -2,6 +2,7 @@ import collections
 import csv
 import json
 import re
+from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
@@ -35,7 +36,7 @@ def get_recipes_links(eda_url):
     return recipes_links
 
 
-def make_csv_with_headers(meal, title, portions):
+'''def make_csv_with_headers(meal, title, portions):
     """Формирует csv файл с заголовками столбцов и информацией о количестве порций."""
     with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
         writer = csv.writer(file)
@@ -65,7 +66,7 @@ def add_to_csv(meal, title, product_info):
 def make_txt_with_cooking_steps(cooking_steps, meal, title):
     with open(f'recipes/{meal}/{title}.txt', 'w') as file:
         for number, step in enumerate(cooking_steps, 1):
-            file.write(f'{number}. {step.text}\n\n')
+            file.write(f'{number}. {step.text}\n\n')'''
 
 
 count = 0
@@ -116,11 +117,11 @@ def get_recipe(title, link, meal, count):
 
     return dish
     # Создаем txt файл с инструкцией по приготовлению
-    # make_txt_with_cooking_steps(cooking_steps, meal, title)
+    '''make_txt_with_cooking_steps(cooking_steps, meal, title)
 
-    # Записываем информацию о блюде в json файл
-    # with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
-    #     json.dump(dish, file, indent=4, ensure_ascii=False)
+    Записываем информацию о блюде в json файл
+    with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
+        json.dump(dish, file, indent=4, ensure_ascii=False)'''
 
 
 def get_recipes_by_category(meal, page_number):
@@ -128,14 +129,28 @@ def get_recipes_by_category(meal, page_number):
     global count
 
     dishes = []
-    # edimdoma_url = f'https://www.edimdoma.ru/retsepty?tags%5Brecipe_mealtime%5D%5B%5D={meal}&with_ingredient=&with_ingredient_condition=and&without_ingredient=&user_ids=&field=&direction=&query='
     edimdoma_url = f'https://www.edimdoma.ru/retsepty?page={page_number}&tags%5Brecipe_mealtime%5D%5B%5D={meal}'
     recipes_links = get_recipes_links(edimdoma_url)
     for dish_title, dish_link in recipes_links.items():
         dish = get_recipe(dish_title, dish_link, meal, count)
         dishes.append(dish)
         count += 1
-    with open(f'recipes/{meal}.json', 'w', encoding='utf-8') as file:
+    with open(f'recipes/{page_number}/{meal}.json', 'w', encoding='utf-8') as file:
         json.dump(dishes, file, indent=4, ensure_ascii=False)
     print(f'Обработка категории {meal} завершена.')
     return f'Обработка категории {meal} завершена.'
+
+
+def main():
+    Path('recipes').mkdir(parents=True, exist_ok=True)
+
+    meals = ['завтрак', 'обед', 'ужин', 'полдник']
+    # Скачиваем 15 различных списков блюд по каждому приему пищи
+    for page in range(1, 11):
+        Path(f'recipes/{page}').mkdir(parents=True, exist_ok=True)
+        for meal in meals:
+            get_recipes_by_category(meal, page)
+
+
+if __name__ == '__main__':
+    main()
