@@ -197,6 +197,18 @@ def make_menu(message, meals_count):
             used.append(dish['id'])
         bot_text += '\n'
         file.close()
+
+    # Создаем файл с ценами на продукты
+    with open('recipes/prices.json') as file_json:
+        prices = json.load(file_json)
+    file = open(f'Users/{folder_name}/цены.txt', 'a')
+
+    for product in products:
+        if product in prices:
+            product_price = " ".join(prices[product])
+            file.write(f'{product}: {product_price}\n')
+    file.close()
+
     return bot_text
 
 
