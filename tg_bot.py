@@ -88,6 +88,11 @@ def post_menu(message):
 
 def choose_menu(message):
     """Функция выводит кнопки для составления меню """
+    folder_name = f'ID_{message.from_user.id}'
+
+    if folder_name in os.listdir('Users'):
+        shutil.rmtree(f'Users/{folder_name}')
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     menu_button_3 = types.KeyboardButton("Получить меню с тремя приемами пищи")
     menu_button_4 = types.KeyboardButton("Получить меню с четырьмя приемами пищи")
@@ -184,7 +189,7 @@ def make_menu(message, meals_count):
 
             for number, product in enumerate(dish['Ингредиенты']):
                 products.add(product)
-                fractions = {'½': '1/2', '⅓': '1/3', '¼': '1/4', '⅕': '1/5', '⅛': '1/8'}
+                fractions = {'½': ' 1/2', '⅓': ' 1/3', '¼': ' 1/4', '⅕': ' 1/5', '⅛': ' 1/8'}
                 if dish['Количество'][number]:
                     for fraction in fractions.keys():
                         if fraction in dish['Количество'][number]:
