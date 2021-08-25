@@ -183,7 +183,13 @@ def make_menu(message, meals_count):
             file.write('\nИнгредиенты:\n')
 
             for number, product in enumerate(dish['Ингредиенты']):
+                products.add(product)
+                fractions = {'½': '1/2', '⅓': '1/3', '¼': '1/4', '⅕': '1/5', '⅛': '1/8'}
                 if dish['Количество'][number]:
+                    for fraction in fractions.keys():
+                        if fraction in dish['Количество'][number]:
+                            dish['Количество'][number] = dish['Количество'][number].replace(fraction, fractions[fraction])
+
                     file.write(f'{product} : {dish["Количество"][number]} {dish["Мера"][number]}\n')
                 else:
                     file.write(f'{product} : {dish["Мера"][number]}\n')
