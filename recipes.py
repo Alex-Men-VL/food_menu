@@ -1,6 +1,6 @@
 import collections
-import csv
 import json
+import os
 import re
 from pathlib import Path
 
@@ -36,56 +36,16 @@ def get_recipes_links(eda_url):
     return recipes_links
 
 
-'''def make_csv_with_headers(meal, title, portions):
-    """Формирует csv файл с заголовками столбцов и информацией о количестве порций."""
-    with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(
-            (
-                'Ингредиенты',
-                'Количество',
-                'Цена',
-                f'Количество порций: {portions}'
-            )
-        )
-
-
-def add_to_csv(meal, title, product_info):
-    """Записывает ингредиенты в csv файл."""
-    with open(f'recipes/{meal}/{title}.csv', 'a', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(
-            (
-                product_info[0],
-                product_info[1],
-                product_info[2]
-            )
-        )
-
-
-def make_txt_with_cooking_steps(cooking_steps, meal, title):
-    with open(f'recipes/{meal}/{title}.txt', 'w') as file:
-        for number, step in enumerate(cooking_steps, 1):
-            file.write(f'{number}. {step.text}\n\n')'''
-
-
-count = 0
-
-
-def get_recipe(title, link, meal, count):
+def get_recipe(title, link, meal):
     """Собирает информацию о блюде"""
     soup = get_site_access(link)
-    # Path(f'recipes/{meal}').mkdir(parents=True, exist_ok=True)
+
     # На сколько порций рассчитано
     portions = soup.find(class_='field__container').find(attrs={'name': 'servings'})['value']
-
-    # Записываем заголовки столбцов
-    # make_csv_with_headers(meal, title, portions)
 
     dish = collections.defaultdict(list)
     dish['Название блюда'] = title
     dish['Количество порций'] = portions
-    dish['id'] = count
     fractions = ('½', '⅓', '¼', '⅕', '⅛')
 
     products = soup.find('div', {"id": "recipe_ingredients_block"}).find_all(class_='definition-list-table')
@@ -106,9 +66,6 @@ def get_recipe(title, link, meal, count):
             dish['Количество'].append(None)
             dish['Мера'].append(product_count)
         product_price = 0  # Здесь вызов функция с ценой
-        product_info = [product_title, product_count, product_price]
-        # Записываем ингредиенты в csv файл
-        # add_to_csv(meal, title, product_info)
 
     cooking_steps = soup.find_all(class_='plain-text recipe_step_text')
     # Записываем шаги готовки в словарь файл
@@ -116,25 +73,16 @@ def get_recipe(title, link, meal, count):
         dish['Шаги готовки'].append(f'{number}. {step.text}')
 
     return dish
-    # Создаем txt файл с инструкцией по приготовлению
-    '''make_txt_with_cooking_steps(cooking_steps, meal, title)
-
-    Записываем информацию о блюде в json файл
-    with open(f'recipes/{meal}.json', 'a', encoding='utf-8') as file:
-        json.dump(dish, file, indent=4, ensure_ascii=False)'''
 
 
 def get_recipes_by_category(meal, page_number):
     """Собирает данные по всем рецептам из данной категории и записывает их в JSON файл"""
-    global count
-
     dishes = []
     edimdoma_url = f'https://www.edimdoma.ru/retsepty?page={page_number}&tags%5Brecipe_mealtime%5D%5B%5D={meal}'
     recipes_links = get_recipes_links(edimdoma_url)
     for dish_title, dish_link in recipes_links.items():
-        dish = get_recipe(dish_title, dish_link, meal, count)
+        dish = get_recipe(dish_title, dish_link, meal)
         dishes.append(dish)
-        count += 1
     with open(f'recipes/{page_number}/{meal}.json', 'w', encoding='utf-8') as file:
         json.dump(dishes, file, indent=4, ensure_ascii=False)
     print(f'Обработка категории {meal} завершена.')
@@ -142,14 +90,18 @@ def get_recipes_by_category(meal, page_number):
 
 
 def main():
-    Path('recipes').mkdir(parents=True, exist_ok=True)
+    if 'recipes' not in os.listdir('.'):
+        Path('recipes').mkdir(parents=True, exist_ok=True)
 
-    meals = ['завтрак', 'обед', 'ужин', 'полдник']
-    # Скачиваем 15 различных списков блюд по каждому приему пищи
-    for page in range(1, 11):
-        Path(f'recipes/{page}').mkdir(parents=True, exist_ok=True)
-        for meal in meals:
-            get_recipes_by_category(meal, page)
+        meals = ['завтрак', 'обед', 'ужин', 'полдник']
+        # Скачиваем 5 различных списков блюд по каждому приему пищи
+        for page in range(1, 6):
+            Path(f'recipes/{page}').mkdir(parents=True, exist_ok=True)
+            for meal in meals:
+                get_recipes_by_category(meal, page)
+        print('Списки рецептов успешно сформированы')
+    else:
+        print('Списки рецептов уже существуют')
 
 
 if __name__ == '__main__':
