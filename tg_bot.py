@@ -29,10 +29,8 @@ def start_message(message):
     menu_button_3 = types.KeyboardButton("Получить меню с тремя приемами пищи")
     menu_button_4 = types.KeyboardButton("Получить меню с четырьмя приемами пищи")
     menu_button_load = types.KeyboardButton("Обновить список рецептов")
-    menu_button_detail = types.KeyboardButton("Подробное меню")
-
     markup.row(menu_button_3, menu_button_4)
-    markup.row(menu_button_detail, menu_button_load)
+    markup.row(menu_button_load)
 
     # Приветствие бота
     bot.send_message(message.chat.id, f'Добро пожаловать, {name}! Я - {bot_name}.\n'
@@ -50,25 +48,52 @@ def get_help(message):
                      'в зависимости от того, сколько приемов пищи в день вы предпочитаете.\n'
                      '2) Получив меню, вы можете нажать на *Подробное меню*, при этом вы получите ответное сообщение,'
                      'в котором сможете выбрать день, подробное меню которого хотите получить в виде txt файла.\n'
-                     '3) Если вам не нравятся те блюда, которые предлагает бот, нажмите на кнопку *Обновить список рецептов*'
-                     , parse_mode='Markdown')
+                     '3) Чтобы получить список цен на продукты из меню, нажмите на *Цены на продукты*.'
+                     '4) Чтобы получить новое меню, нажмите на *Новое меню*.\n'
+                     '5) Если вам не нравятся те блюда, которые предлагает бот, нажмите на кнопку *Новое меню*,'
+                     'a затем на *Обновить список рецептов*',
+                     parse_mode='Markdown')
 
 
 @bot.message_handler(content_types=['text'])
 def post_menu(message):
     """Отправляет краткое меню на неделю с 3/4 приемами пищи в день"""
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    menu_button_detail = types.KeyboardButton("Подробное меню")
+    menu_button_price = types.KeyboardButton("Цены на продукты")
+    menu_button_new_menu = types.KeyboardButton("Новое меню")
+    markup.row(menu_button_detail, menu_button_price)
+    markup.row(menu_button_new_menu)
+
     if message.text == 'Получить меню с тремя приемами пищи':
-        bot_text = make_menu(3)
-        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown')
+        bot_text = make_menu(message, 3)
+        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown', reply_markup=markup)
         bot.send_message(message.chat.id, '_Если у вас возникли проблемы, введите /help_', parse_mode='Markdown')
     elif message.text == 'Получить меню с четырьмя приемами пищи':
-        bot_text = make_menu(4)
-        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown')
+        bot_text = make_menu(message, 4)
+        bot.send_message(message.chat.id, bot_text, parse_mode='Markdown', reply_markup=markup)
         bot.send_message(message.chat.id, '_Если у вас возникли проблемы, введите /help_', parse_mode='Markdown')
     elif message.text == 'Обновить список рецептов':
         load_recipes(message)
     elif message.text == 'Подробное меню':
         post_recipes(message)
+    elif message.text == 'Цены на продукты':
+        file = open(f'Users/ID_{message.from_user.id}/цены.txt', 'r')
+        bot.send_document(message.chat.id, file)
+    elif message.text == 'Новое меню':
+        choose_menu(message)
+
+
+def choose_menu(message):
+    """Функция выводит кнопки для составления меню """
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    menu_button_3 = types.KeyboardButton("Получить меню с тремя приемами пищи")
+    menu_button_4 = types.KeyboardButton("Получить меню с четырьмя приемами пищи")
+    menu_button_load = types.KeyboardButton("Обновить список рецептов")
+    markup.row(menu_button_3, menu_button_4)
+    markup.row(menu_button_load)
+    bot.send_message(message.chat.id, f'_Нажмите на кнопку_ *Получить меню*_,с нужным количеством приемов пищи_.\n',
+                     reply_markup=markup, parse_mode='Markdown')
 
 
 def load_recipes(message):
