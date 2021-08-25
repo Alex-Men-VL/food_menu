@@ -173,8 +173,8 @@ def make_menu(message, meals_count):
             # Находим рецепт, который еще не выводился
             while True:
                 dish = random.choice(recipes)
-                if dish['id'] not in used:
-                    used.append(dish['id'])
+                if dish['Название блюда'] not in used:
+                    used.append(dish['Название блюда'])
                     break
 
             file.write(f'\n{meal.title()}: {dish["Название блюда"]}\n')
