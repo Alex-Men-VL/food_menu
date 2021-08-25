@@ -15,11 +15,13 @@ token = env('TG_TOKEN')
 
 bot = telebot.TeleBot(token)
 
+# При первом запуске бота, рецепты берутся из папки recipes/1
 page_number = 1
 
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    Path('Users').mkdir(parents=True, exist_ok=True)
     user = message.from_user
     name = user.first_name
     bot_name = bot.get_me().first_name
@@ -101,7 +103,7 @@ def load_recipes(message):
     global page_number
 
     page_number += 1
-    if page_number == 11:
+    if page_number == 6:
         page_number = 1
 
     bot.send_message(message.chat.id, 'Список рецептов обновлен!')
@@ -123,11 +125,10 @@ def callback_inline(call):
     """Отправляет txt файл с подробным меню"""
     if call.data.isdigit():
         current_date = datetime.datetime.now()
-        last_date = current_date + datetime.timedelta(days=6)
-        folder_name = 'Подробное меню'
-        if folder_name in os.listdir('.'):
+        folder_name = f'ID_{call.message.chat.id}'
+        if folder_name in os.listdir('Users'):
             total_date = current_date + datetime.timedelta(days=int(call.data))
-            file = open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'r')
+            file = open(f'Users/{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'r')
             bot.send_document(call.message.chat.id, file)
 
         # Удаляем сообщение с кнопками
@@ -139,7 +140,7 @@ def callback_inline(call):
                                        'нажмите на кнопку "Получить меню"')
 
 
-def make_menu(meals_count):
+def make_menu(message, meals_count):
     """Составляет меню на неделю"""
     meals = ['завтрак', 'обед', 'ужин', 'полдник']
     if meals_count == 4:
@@ -148,18 +149,19 @@ def make_menu(meals_count):
     used = []
     current_date = datetime.datetime.now()
 
-    folder_name = 'Подробное меню'
+    folder_name = f'ID_{message.from_user.id}'
 
-    if folder_name in os.listdir('.'):
-        shutil.rmtree(folder_name)
-    Path(folder_name).mkdir(exist_ok=True)
+    if folder_name in os.listdir('Users'):
+        shutil.rmtree(f'Users/{folder_name}')
+    Path(f'Users/{folder_name}').mkdir(parents=True, exist_ok=True)
 
     bot_text = ''
+    products = set()
 
     for day in range(1, 8):
         # Создаем txt файл с меню на первый день
         total_date = current_date + datetime.timedelta(days=day - 1)
-        file = open(f'{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'a')
+        file = open(f'Users/{folder_name}/{total_date.strftime("%d-%b-%Y")}.txt', 'a')
 
         bot_text += f'*{total_date.strftime("%d-%b-%Y")}*\n\n'
 
